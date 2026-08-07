@@ -19,7 +19,6 @@ h3 {
 @media (max-width: 768px) {
 	
 	img {
-		max-width: 50%;
 		margin: auto;
 		display: block;
 	}
