@@ -16,6 +16,15 @@ h3 {
 	text-align: center;
 }
 
+a {
+  text-decoration: none;
+  color: black;
+}
+
+a:hover{
+	color: gray;
+}
+
 @media (max-width: 750px) {
 	
 	img {
