@@ -1,4 +1,4 @@
-%roads
+%Here, road predicate is defined in the form of road(start, destination, distance)
 
 road(kandy, katugastota, 6.7).
 road(kandy, peradeniya, 6.0).
@@ -37,7 +37,7 @@ road(tennakumbura, digana, 12.0).
 road(tennakumbura, teldeniya, 15.0).
 
 
-% heuristic(Location, Goal, EstimatedDistance)
+%Here, the heuristic values for A search algorithm is defined in the form of heuristic(Location, Goal, EstimatedDistance)
 
 heuristic(katugastota, kandy, 5.8).
 heuristic(peradeniya, kandy, 5.5).
@@ -112,20 +112,11 @@ heuristic(getambe, digana, 21.3).
 heuristic(mahaiyawa, digana, 14.5).
 heuristic(digana, digana, 0).
 
-/*
-%H values
-h(katugastota, 0).
-h(kandy, 6.7).
-h(peradeniya, 11.2).
-h(tennakumbura, 9.4).
-h(ampitiya, 11.0).
-h(kundasale, 12.9).
-h(getambe, 9.2).
-h(mahaiyawa, 4.6).
-*/
 
+%blocked predicate is updated during the program is run
 :- dynamic(blocked/2).
 
+%This will generate all the blocked roads
 list_blocked :-
     forall(
         blocked(A, B),
@@ -133,48 +124,76 @@ list_blocked :-
     ).
 
 
+%connected predicate makes sure road is available and not blocked bi-directionally
 connected(A,B,D):-
     road(A,B,D), \+blocked(A,B).
 
 connected(A,B,D):-
     road(B,A,D), \+blocked(B,A).
 
-%DFS
 
+
+%DFS implementation
+%dfs_path returns Path and Cost
 dfs_path(Start, Goal, Path, Cost):-
+
+    %calling dfs_travel
 	dfs_travel(Start, Goal, [Start], RevPath, 0, Cost),
+    %reverse the path so it will be from starting location to ending location
 	reverse(RevPath, Path).
 
+%dfs_travel base case
 dfs_travel(Node, Node, Path, Path, Cost, Cost).
+
+
 dfs_travel(Current, Goal, Visited, Path, CostSoFar, Cost):-
-	connected(Current, Next, StepCost),
+	%make sure current and next available and get stepcost
+    connected(Current, Next, StepCost),
+    %make sure next is not visited
 	\+ member(Next, Visited),
+    %calculates newcost
 	NewCost is CostSoFar + StepCost,
+    %recurssion
 	dfs_travel(Next, Goal, [Next|Visited], Path, NewCost, Cost).
 
-%BFS
 
+
+%BFS implementation
+%bfs returns Path and Cost
 bfs(Start, Goal, Path, Cost):-
+    %calls bfs_queue
 	bfs_queue([[Start]], Goal, RevPath),
-	reverse(RevPath, Path),
+	%reverse the path to be starting to ending
+    reverse(RevPath, Path),
+    %calculates Cost when Path given
 	path_cost(Path,Cost).
 
+%base case
 bfs_queue([[Goal|Rest]|_], Goal, [Goal|Rest]).
+
+
 bfs_queue([[Current|Rest]|Other], Goal, Path) :-
-	findall([Next,Current|Rest],
+	%find all solutions and store in NewPaths
+    findall([Next,Current|Rest],
 	(connected(Current, Next, _),
 	\+ member(Next, [Current|Rest])),
 	NewPaths),
+    %merge Other and Newpath into updated
 	append(Other, NewPaths, Updated),
+    %recurssion
 	bfs_queue(Updated, Goal, Path).
 
 
 %path cost finder
-
+%base case
 path_cost([_],0).
+%returns Cost
 path_cost([A,B|Rest],Cost):-
-	connected(A,B,D),
+	%get the cost D
+    connected(A,B,D),
+    %recurssion
 	path_cost([B|Rest],CostRest),
+    %update cost
 	Cost is D + CostRest.
 
 
@@ -234,54 +253,26 @@ expand_node(CurrentCity, G, PastCities, Goal, NewPaths) :-
     ).
 
 
-
-
-
-
-
-
-
-/*
-%---------------------------------------------------------------------
-%A*
-astar(Start, Goal, Path, Cost):-
-	h(Start, H0),
-	astar_search([[H0,0,[Start]]], Goal, RevPath, Cost),
-	reverse(RevPath, Path).
-
-astar_search([[_,Cost,[Goal|Rest]]|_], Goal, [Goal|Rest], Cost).
-astar_search([[_,G,[Current|Rest]]|Others], Goal, Path, Cost):-
-	findall([F2, G2,[Next,Current|Rest]],
-		(connected(Current, Next, StepCost),
-		\+ member(Next,[Current|Rest]),
-		G2 is G + StepCost,
-		h(Next,H),
-		F2 is G2 + H),
-		Children),
-	append(Others, Children, All),
-	sort(All,Sorted),
-	astar_search(Sorted,Goal,Path,Cost).
-
-
-%-----------------------------------------------------------------
-*/
-
 %Display results
-
 show_all_paths(Start, Goal):-
     nl, 
     write('DFS results'), nl,
+    %find all solutions ans store them in DfsPaths
 	findall([Pdfs,Cdfs],dfs_path(Start, Goal, Pdfs, Cdfs), DfsPaths),
+    %display Path and Costs
     display_paths(DfsPaths), nl,
     write('BFS results'), nl,
+    %find all solutions and store them in BfsPaths
     findall([Pbfs,Cbfs],bfs(Start, Goal, Pbfs, Cbfs), BfsPaths),
+    %display paths and costs
     display_paths(BfsPaths), nl,
     write('A* results'), nl,
+    %find all solutions and store them in APaths
     findall([Pa,Ca], astar(Start, Goal, Pa, Ca), APaths),
+    %display paths and costs
     display_paths(APaths),
 
     %----------------------------------------------
-    %need to study
 
     % Combine results from all algorithms
     append(DfsPaths, BfsPaths, TempPaths),
@@ -299,8 +290,9 @@ show_all_paths(Start, Goal):-
 
 
 
-
+%base case
 display_paths([]).
+%split as path and cost
 display_paths([[P,C]|Rest]) :-
 	write('Path= '), write(P), nl,
 	write(' cost= '), write(C), nl, nl,
@@ -308,17 +300,20 @@ display_paths([[P,C]|Rest]) :-
 
 
 %-------------------------------------------------------
-%need to study
 % Find path with the smallest distance
 shortest_path([[Path, Cost] | Rest], ShortestPath, ShortestCost) :-
+    %make current state as smallest
     shortest_path(Rest, Path, Cost, ShortestPath, ShortestCost).
 
+%base case
 shortest_path([], Path, Cost, Path, Cost).
 
+%returns shortestpath and shortestcost
 shortest_path([[Path, Cost] | Rest],
               CurrentPath, CurrentCost,
               ShortestPath, ShortestCost) :-
 
+    %compare values and update smallest one
     ( Cost < CurrentCost ->
         NewPath = Path,
         NewCost = Cost
@@ -326,7 +321,8 @@ shortest_path([[Path, Cost] | Rest],
         NewPath = CurrentPath,
         NewCost = CurrentCost
     ),
-
+    
+    %recurssion
     shortest_path(Rest,
                   NewPath,
                   NewCost,
@@ -340,6 +336,7 @@ shortest_path([[Path, Cost] | Rest],
 
 menu:-
 
+    %Main menu
     nl, write('====== Food Delivery Route Finding System ======='), nl,
     write('1. Find path: '), nl,
     write('2. Block a road: '), nl,
@@ -349,7 +346,8 @@ menu:-
     nl, write('Enter your choice: '),
     read(Choice),
     handle(Choice).
-    
+
+%find route     
 handle(1):-
     nl, write('Enter start location: '),
     read(Start),
@@ -358,6 +356,7 @@ handle(1):-
     show_all_paths(Start, Goal), menu ; nl, write('invalid input'), !, nl,
     menu.
 
+%block route
 handle(2):-
     nl, write('Enter the starting location of the road to block: '),
     read(Start),
@@ -368,6 +367,7 @@ handle(2):-
     nl, write(Start - End), write(': Road blocked successfully.'), nl,
     menu.
 
+%unblock route
 handle(3):-
     nl, write('Enter the starting location of the road to unblock: '),
     read(Start),
@@ -378,14 +378,17 @@ handle(3):-
     nl, write(Start - End), write(': Road unblocked successfully.'), nl,
     menu.
 
+%show all blocked routes
 handle(4):-
     nl, write('Blocked roads details:'), nl, nl,
     list_blocked,
     menu.
 
+%exit
 handle(5):-
     nl, write('Exiting the program. Goodbye!'), nl.
 
+%invalid input
 handle(_):-
     nl, write('Invalid choice. Please try again.'), nl,
     menu.
